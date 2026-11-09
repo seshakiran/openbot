@@ -393,6 +393,10 @@ Open **Server settings → Import** on this computer, or on a joined server in t
 
 The import adds each agent's name, instructions, avatar, skills, routines, and memories. Workspace files are copied to `imported/` in the agent's workspace if you included them. Chat history is not copied: the export agent keeps the important facts as memories. For this computer, the file is read here and is not uploaded, and it has no size limit: OpenBot reads it from disk one file at a time and skips an agent whose files do not fit in the free disk space. For a joined server, the file goes to the computer that runs that server through the encrypted host connection, in parts, so it has no size limit either; the server must have free disk space for it. A server on an older version of OpenBot takes a file of at most 100 MB. A member's import uses a skill that the server already has instead of changing it. The export skill and its format are in [`resources/agent-import/grok-bot/SKILL.md`](resources/agent-import/grok-bot/SKILL.md).
 
+For a Mac development host with a remote iPhone, see
+[Mac and iPhone over Tailscale](docs/mac-iphone-tailscale.md). This setup pairs
+the phone without an email sender and keeps development login routes local.
+
 ## Commands
 
 The browser client is served at `/app` by the public web app. For local development, run
