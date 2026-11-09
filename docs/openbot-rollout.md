@@ -80,8 +80,11 @@ and sample chats from the upstream seed.
 
 Claude was downloaded through the existing provider installer. A later UI read
 showed Claude usage in the page rail; a successful Claude reply has not been
-verified. The browser client loaded its account sign-in screen. Browser sign-in remains unverified. The user reports an iPhone connection over
-Tailscale; the assistant verified the server endpoints but did not observe a phone chat. No production service was deployed.
+verified. The browser client loaded its account sign-in screen; browser sign-in
+remains unverified. The iPhone completed account pairing over Tailscale. After
+fixing the missing Electron Signal-origin setting, the Mac host reported online.
+On 2026-11-09, the user confirmed that the iPhone could see the agents. A complete
+phone chat remains unverified. No production service was deployed.
 
 The local toolchain is not on the system PATH. To run this checkout in a terminal:
 
