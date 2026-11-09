@@ -15,11 +15,18 @@ The first phone connection failed because development network detection selected
 the Mac's Wi-Fi address. That address was not reachable from the remote phone.
 Plain HTTP on a Tailscale `100.x` address also fails the phone's pairing URL rules.
 We used private Tailscale HTTPS and secure WebSocket endpoints, then passed their
-addresses explicitly to the development launcher.
+addresses explicitly to the development launcher. The app also needs
+`OPENBOT_REMOTE_SIGNAL_URL` to permit that exact WSS origin in its existing
+content security policy. Without it, login can work while the host times out
+and the phone shows the server as offline.
 
-The user reports that the iPhone connected. The assistant verified HTTPS, phone
-API responses and the WebSocket handshake from the Mac. It did not observe a
-complete chat on the phone. Browser sign-in and full provider tests remain open.
+The iPhone completed account pairing. A later connection check found the Mac
+host in an error state because Electron did not permit the Tailscale WSS origin.
+After adding `OPENBOT_REMOTE_SIGNAL_URL` and restarting the same profile, the
+host reported online and ready for WebRTC connections. Electron then passed the
+WSS handshake. On 2026-11-09, the user confirmed that the iPhone could see the
+agents. A complete chat on the phone, browser sign-in and full provider tests
+remain unverified.
 
 ## Install and start
 
@@ -70,7 +77,8 @@ sh scripts/start-tailnet.sh app
 ```
 
 The launcher sets the phone API to `https://<host>:8443` and Signal to
-`wss://<host>:8444/v1/signal`. Shell values are required: automatic Wi-Fi detection
+`wss://<host>:8444/v1/signal`. It also sets `OPENBOT_REMOTE_SIGNAL_URL` to
+the same value for Electron. Shell values are required: automatic Wi-Fi detection
 can override network settings saved in `.openbot/dev-state.json`.
 
 The default local ports are API 3100, Signal 3101 and phone gateway 3110. The
@@ -134,8 +142,8 @@ It does not use a real account or phone.
 
 The live setup checks returned HTTP 200 for `/v1/mobile/features`, HTTP 401 for
 `/v1/mobile-auth/session` without a token, HTTP 403 for a development login route,
-and a successful WSS handshake at `/v1/signal`. These are server checks; test the
-actual iPhone connection after every network change.
+and a successful WSS handshake at `/v1/signal`. The user also confirmed that the iPhone loaded the agent list after the
+Signal-origin fix. Test the actual iPhone connection after every network change.
 
 Stop this checkout with `bun run dev:stop`, then stop the gateway with Ctrl-C in
 its terminal. To remove only the forwarding added here:

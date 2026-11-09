@@ -24,6 +24,7 @@ case "${1:-}" in
     case "$OPENBOT_TAILNET_HOST" in *.ts.net) ;; *) echo 'Use the full Tailscale .ts.net hostname.' >&2; exit 2;; esac
     export OPENBOT_MOBILE_AUTH_API_URL="https://$OPENBOT_TAILNET_HOST:$OPENBOT_TAILNET_API_PORT"
     export REMOTE_SIGNAL_URL="wss://$OPENBOT_TAILNET_HOST:$OPENBOT_TAILNET_SIGNAL_PORT/v1/signal"
+    export OPENBOT_REMOTE_SIGNAL_URL="$REMOTE_SIGNAL_URL"
     exec bun run dev
     ;;
   *) echo 'Usage: sh scripts/start-tailnet.sh gateway|app' >&2; exit 2 ;;
