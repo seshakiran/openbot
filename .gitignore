@@ -74,3 +74,6 @@ keys
 
 # Persistent local development identity and migration recovery.
 .openbot/
+
+# Local Python caches for optional voice adapters.
+__pycache__/

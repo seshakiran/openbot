@@ -2,6 +2,7 @@ import type { PartialTranslation } from "../../../message";
 import type { messages as source } from "../../en/mobile/settings";
 
 export const messages = {
+  "mobile.settings.voice.woof.credit": "Voice by Underdog Woof",
   "mobile.settings.saveFailed": "Kan deze instelling niet opslaan. Probeer het opnieuw.",
   "mobile.settings.language.title": "Taal",
   "mobile.settings.language.row": "App-taal",
