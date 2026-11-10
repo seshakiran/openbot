@@ -154,3 +154,54 @@ tailscale serve --https=8444 off
 ```
 
 Do not run `tailscale serve reset`: it would remove unrelated services.
+
+
+## Diagnose a phone that connects and then drops
+
+A phone support log on 2026-11-09 showed a cancelled POST to
+`/v2/remote/sessions/` after about 90 seconds. The Mac stayed awake, its host status
+was online and Tailscale saw the phone. The longest attempt overlapped a phone
+background interval. This identifies session creation as one failure point; it
+does not prove the cause of every foreground drop.
+
+The gateway now buffers request bodies, removes hop-by-hop and stale body-length
+headers, and gives the upstream API a 15-second deadline. A stalled API returns
+504. Its isolated E2E check includes this case. The live unauthenticated session
+route returned 401 promptly over HTTPS. Later, the phone was found with
+Tailscale switched off. After the user turned it on, session creation returned
+201, ticket requests returned 200 and the Mac observed WebRTC connected with
+data flowing both ways. This confirms recovery, not a long-duration soak test.
+
+For temporary diagnostics, set `OPENBOT_PHONE_GATEWAY_DIAGNOSTICS=1` when starting
+the gateway. It prints only route categories, status codes and durations. It does
+not print URLs, identifiers, headers, body text or credentials. Keep any saved log
+under ignored `.openbot/`. Disable diagnostics when troubleshooting is complete.
+
+While the phone is stuck, test `/v1/mobile/features` on the same private API
+origin in Safari on that phone. A prompt JSON response indicates that HTTPS is
+reachable from Safari; it does not prove that the app's session request or its
+WebRTC data channel works. Save the phone support log before resetting anything.
+
+
+### Which VPN must stay on
+
+Tailscale must stay on on both devices, even on home Wi-Fi. If troubleshooting a
+conflict with another VPN, turning off that other VPN is different from turning
+off Tailscale. Do not reset the OpenBot pairing for a VPN outage.
+
+Check in this order:
+
+1. Confirm Tailscale is connected on the iPhone and the Mac.
+2. Open `https://YOUR-MAC.YOUR-TAILNET.ts.net:8443/v1/mobile/features` in Safari
+   on the iPhone. It should show JSON. If Safari also hangs, investigate VPN,
+   DNS and network access before the OpenBot app.
+3. If Safari works but OpenBot does not, reopen OpenBot and check its Support log.
+4. Check the Mac host status. It must be online, not just a running Electron app.
+5. Preserve pairing. Generate a new code only for an expired code or an actual
+   sign-in problem, not an ordinary reconnect.
+
+The installed iPhone app tested here is 1.4.7 (32). It can connect to the Mac and
+show agents, but it does not have custom voice-server settings. In this checkout,
+that feature is listed under 1.4.8, marked In review; this is repository state,
+not a claim about the current App Store release. Woof needs a phone build with
+custom voice-server support. See [Woof setup](../tools/woof/README.md).

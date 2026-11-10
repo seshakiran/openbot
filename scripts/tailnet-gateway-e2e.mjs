@@ -9,6 +9,11 @@ const upstream = Bun.serve({
   port: 0,
   async fetch(request) {
     upstreamCalls += 1;
+    if (new URL(request.url).searchParams.has("slow")) {
+      return await new Promise((resolve) =>
+        request.signal.addEventListener("abort", () => resolve(new Response("Cancelled")), { once: true }),
+      );
+    }
     if (request.method === "POST") {
       assert.equal(request.headers.get("authorization"), "Bearer test-session");
       assert.equal(await request.text(), '{"fixture":true}');
@@ -23,7 +28,12 @@ reservation.stop(true);
 const child = Bun.spawn(
   [process.execPath, fileURLToPath(new URL("../tools/tailnet/phone-gateway.mjs", import.meta.url))],
   {
-    env: { ...process.env, OPENBOT_API_PORT: String(upstream.port), OPENBOT_PHONE_GATEWAY_PORT: String(gatewayPort) },
+    env: {
+      ...process.env,
+      OPENBOT_API_PORT: String(upstream.port),
+      OPENBOT_PHONE_GATEWAY_PORT: String(gatewayPort),
+      OPENBOT_PHONE_UPSTREAM_TIMEOUT_MS: "250",
+    },
     stdout: "pipe",
     stderr: "inherit",
   },
@@ -49,13 +59,15 @@ try {
   });
   assert.deepEqual(await forwarded.json(), { forwarded: true });
   assert.equal((await fetch(`${base}//v1/skills`)).status, 401);
-  assert.equal(upstreamCalls, 3);
+  assert.equal((await fetch(`${base}/v1/mobile-auth/session?slow=1`)).status, 504);
+  assert.equal(upstreamCalls, 4);
   const report = {
     passed: true,
     checks: [
       "remote login and host registration blocked",
       "session requires authentication",
       "phone request body and authorization preserved",
+      "stalled upstream request returns 504",
     ],
   };
   await mkdir(".openbot-build/tailnet-gateway-e2e", { recursive: true });

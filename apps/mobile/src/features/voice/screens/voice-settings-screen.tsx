@@ -248,7 +248,14 @@ function VoiceServerSection({ preview }: { preview?: ReturnType<typeof useVoiceP
   const server = useVoiceServer((state) => state.server);
   const voice = server?.routes.speech ? server.routes.voice : null;
   return (
-    <SettingsSection title={t("mobile.settings.voice.server.title")} footer={t("mobile.settings.voice.server.footer")}>
+    <SettingsSection
+      title={t("mobile.settings.voice.server.title")}
+      footer={
+        server?.routes.speechModel === "underdog-woof-tts"
+          ? `${t("mobile.settings.voice.server.footer")} ${t("mobile.settings.voice.woof.credit")}`
+          : t("mobile.settings.voice.server.footer")
+      }
+    >
       <SettingsRow
         supportingText={server ? voiceServerHost(server.address) : t("mobile.settings.voice.server.notSetUp")}
         onPress={() => router.push("/settings/voice-server")}

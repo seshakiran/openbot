@@ -1,5 +1,4 @@
 import type { AgentProviderRef } from "@openbot/contracts/agent-providers";
-import { isNarrationItemId } from "@openbot/contracts/conversation-narration";
 import {
   type ChannelMessage,
   type ChannelTask,
@@ -237,7 +236,6 @@ function createController({
    * The progress updates read aloud in the newest turn. A stop of the reading keeps them: words that
    * steer the running turn do not read its earlier updates again.
    */
-  let readUpdates: { turnId: string; ids: Set<string> } | null = null;
   /** Each turn, interruption and the end make the work of the turn before them stale. */
   let generation = 0;
   let pauseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -347,9 +345,7 @@ function createController({
   }
 
   /**
-   * Reads the answer while the agent writes it. A turn can answer in more than one message, and its
-   * progress updates come before the answer: their texts join in order, so the text only grows. The
-   * phase turns to speaking when the first part plays.
+   * Reads a completed answer. The phase turns to speaking when the first audio part plays.
    */
   function readAnswer(answer: ConversationMessage, complete: boolean, settled = false): void {
     if (!reading) {
@@ -438,11 +434,9 @@ function createController({
     const turnId = current.turnId;
     const active = turnId !== null && conversation.activeTurnId === turnId;
     // A streamed message that a later step marks as commentary is not part of the spoken answer.
-    // Progress updates are read on purpose, so only a message read as the answer counts.
     if (
       readIds.some(
         (id) =>
-          !readUpdates?.ids.has(id) &&
           !conversation.messages.some(
             (message) => message.id === id && message.turnId === turnId && isAgentAnswer(message),
           ),
@@ -455,28 +449,9 @@ function createController({
       }
     }
     const answer = turnId ? latestTurnAnswer(conversation.messages, turnId) : undefined;
-    // Each progress update is read when it is complete, as on desktop. A stopped or failed turn ends
-    // its open update part way, so only a completed one is read.
-    const provider = input().provider;
-    if (turnId && readUpdates?.turnId !== turnId) readUpdates = { turnId, ids: new Set() };
-    for (const update of conversation.messages)
-      if (
-        turnId &&
-        readUpdates &&
-        update.turnId === turnId &&
-        update.author === "assistant" &&
-        update.itemType === "commentary" &&
-        update.status === "completed" &&
-        update.text.trim() &&
-        !readTexts.has(update.id) &&
-        !readUpdates.ids.has(update.id) &&
-        isNarrationItemId(update.id, provider)
-      ) {
-        readUpdates.ids.add(update.id);
-        readAnswer(update, false, true);
-      }
-    // The answer plays while it streams. It is complete when it is done and its turn has ended.
+    // Speak only the completed answer. Streamed text can later become commentary.
     if (answer && (answer.status === "streaming" || answer.status === "completed")) {
+      if (answer.status !== "completed" || active) return;
       current.endedAt = null;
       if (graceTimer) clearTimeout(graceTimer);
       graceTimer = null;

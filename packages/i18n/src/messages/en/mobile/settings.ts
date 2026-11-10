@@ -1,6 +1,7 @@
 import { defineMessages } from "../../../message";
 
 export const messages = defineMessages("mobile.settings", {
+  "mobile.settings.voice.woof.credit": "Voice by Underdog Woof",
   "mobile.settings.saveFailed": "Could not save this setting. Try again.",
   "mobile.settings.language.title": "Language",
   "mobile.settings.language.row": "App language",
