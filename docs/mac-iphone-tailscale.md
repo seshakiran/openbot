@@ -3,7 +3,9 @@
 This is the development setup used on 2026-11-09. The Mac runs Electron, the
 account API and Signal. The iPhone uses the OpenBot phone app on another network.
 Both devices must use the same Tailscale tailnet, with access allowed by its rules.
-The Mac must stay awake. These processes do not start automatically after reboot.
+The Mac must stay awake. Manual processes do not start automatically after reboot.
+For startup at Mac login, automatic restart and saved lifecycle logs, use the
+[managed Mac services](../tools/macos/README.md).
 
 ## What we changed
 
@@ -205,3 +207,26 @@ show agents, but it does not have custom voice-server settings. In this checkout
 that feature is listed under 1.4.8, marked In review; this is repository state,
 not a claim about the current App Store release. Woof needs a phone build with
 custom voice-server support. See [Woof setup](../tools/woof/README.md).
+
+## Managed services verified on 2026-11-10
+
+The setup Mac now runs OpenBot, the phone gateway and Woof as user LaunchAgents.
+They start at Mac login and restart after an exit. The existing profile, agents,
+pairing and Tailscale Serve routes stay in use. Local property lists, settings,
+keys and logs stay in ignored `.openbot/`; they are not part of the repository.
+
+| Check | Result |
+| --- | --- |
+| Automatic restart | All three child processes restarted after a test SIGTERM. |
+| Controlled stop and start | Passed after adding a wait for launchd shutdown to finish. |
+| Private HTTPS | Phone API and voice health endpoint returned HTTP 200. |
+| Host readiness | Existing host reported online and ready for WebRTC. |
+| Saved logs | Shutdown events persisted across restarts; files had private permissions. |
+| Log privacy | Process test confirmed that synthetic credentials were excluded. |
+| iPhone after this installation | Not yet confirmed on the phone. |
+| Login or reboot startup | Configured, but not tested with a real logout or reboot. |
+
+See the [service guide](../tools/macos/README.md) for prepare, install, status,
+stop, start and removal commands. The Mac must stay awake and logged in, and
+Tailscale must stay on at both ends. This setup does not detect every frozen
+process or repair a VPN outage.
