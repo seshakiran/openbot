@@ -750,3 +750,6 @@ show the update phase, the staged version, and each tenant's work state. No Git 
 or compilation is required on the host.
 Normal desktop users need only the DMG. See the [host deployment guide](docs/multi-tenant-hosting.md)
 for existing-user enrollment, password handling, package upgrades, and required target-host checks.
+
+For Mac login startup, automatic restart and private lifecycle logs, see
+[managed Mac services](tools/macos/README.md).
