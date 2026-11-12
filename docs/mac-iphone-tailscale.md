@@ -230,3 +230,11 @@ See the [service guide](../tools/macos/README.md) for prepare, install, status,
 stop, start and removal commands. The Mac must stay awake and logged in, and
 Tailscale must stay on at both ends. This setup does not detect every frozen
 process or repair a VPN outage.
+
+## Connect a MacBook Pro
+
+The desktop app needs an explicit private account API at startup. An invitation
+does not change the account service on its login screen. Use the
+[MacBook SSH launcher](../tools/macos/MACBOOK.md) for an owner connection without
+opening development email login routes on the phone gateway. Real MacBook sign-in
+and a Hanu reply remain unverified until the device test.

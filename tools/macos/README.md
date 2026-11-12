@@ -5,6 +5,8 @@ It does not move the database, change pairing, or reset agents. It uses three
 user LaunchAgents: the OpenBot development stack, the phone API gateway, and
 optional Woof speech. There is no new network listener or public endpoint.
 
+For a second Mac, see [MacBook client setup](MACBOOK.md).
+
 ## Requirements
 
 - macOS, a logged-in desktop session, Node, Python 3 and the installed Bun toolchain.
