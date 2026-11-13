@@ -2,6 +2,7 @@
 """Connect the installed Mac app to a private OpenBot host through SSH."""
 import argparse
 import json
+import ipaddress
 import os
 from pathlib import Path
 import plistlib
@@ -43,10 +44,19 @@ def main():
         parser.error('Cannot find an executable OpenBot app. Set --app to its .app path.')
     # Refuse an occupied port. Never attach the account client to another local service.
     with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             probe.bind(('127.0.0.1', args.port))
         except OSError:
             parser.error('The local port is busy. Close the earlier launcher or select --port.')
+    # Installed upstream binaries still send anonymous analytics when their UI switch is off.
+    # Require a system-level destination block before opening that binary.
+    try:
+        analytics_addresses = {entry[4][0] for entry in socket.getaddrinfo('analytics.openbot.run', 443)}
+    except socket.gaierror:
+        analytics_addresses = set()
+    if not analytics_addresses or not all(ipaddress.ip_address(value).is_loopback for value in analytics_addresses):
+        parser.error('Install the analytics destination block first: sudo python3 block-analytics.py install')
     os.umask(0o077)
     tunnel = None
     desktop = None

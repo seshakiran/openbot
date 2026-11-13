@@ -12,6 +12,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect } from "effect";
 import { createAccountAnalytics } from "../src/server/account-analytics";
 import { HostedServerService } from "../src/server/hosted-server-service";
@@ -175,13 +176,15 @@ async function run() {
     woken,
   );
   check(
-    "analytics gets the wake with the reason retention",
-    events.some(
-      (event) =>
-        event.name === "hosted_server_action" &&
-        event.properties.action === "woken" &&
-        event.properties.reason === "retention",
-    ),
+    "the retention wake follows the analytics policy",
+    OPTIONAL_ANALYTICS_ENABLED
+      ? events.some(
+          (event) =>
+            event.name === "hosted_server_action" &&
+            event.properties.action === "woken" &&
+            event.properties.reason === "retention",
+        )
+      : events.length === 0,
     events,
   );
   check("a server with 9 days of sleep does not start", resumes("recent") === 0, calls);
@@ -200,8 +203,10 @@ async function run() {
     { calls, row: row("due") },
   );
   check(
-    "analytics gets the idle stop",
-    events.some((event) => event.properties.action === "idle_stopped"),
+    "the idle stop follows the analytics policy",
+    OPTIONAL_ANALYTICS_ENABLED
+      ? events.some((event) => event.properties.action === "idle_stopped")
+      : events.length === 0,
     events,
   );
 

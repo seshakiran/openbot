@@ -7,6 +7,7 @@ import {
   currentAnalyticsInstallId,
   type FailureProperties,
   newAnalyticsInstallId,
+  OPTIONAL_ANALYTICS_ENABLED,
   openPanelTransport,
   ReportQueue,
   safeProperties,
@@ -41,6 +42,7 @@ export function configureDesktopReports(
   tracking: boolean,
   user: Pick<CentralAuthUser, "id" | "email"> | null,
 ): void {
+  if (!OPTIONAL_ANALYTICS_ENABLED) return;
   const capture = info.analyticsCaptureUrl;
   if (capture === undefined && (!import.meta.env.PROD || info.variant !== "production")) return;
   queue ??= new ReportQueue(
@@ -65,14 +67,14 @@ export function configureDesktopReports(
  * Off: they go with the install ID only, and not at all without one.
  */
 export function configureErrorReports(tracking: boolean, accountId: string | null = profileId): void {
-  enabled = tracking;
+  enabled = OPTIONAL_ANALYTICS_ENABLED && tracking;
   profileId = accountId;
   if (queue) {
     const initial = !configured;
     configured = true;
     const account = tracking ? accountId : null;
     const subject = tracking ? accountId : installId;
-    const sending = tracking || subject !== null;
+    const sending = OPTIONAL_ANALYTICS_ENABLED && (tracking || subject !== null);
     Effect.runFork(
       queue.configure(sending, subject).pipe(
         Effect.andThen(() => {
@@ -129,7 +131,7 @@ function webAnalyticsDefault(): boolean {
 
 export function configureWebReports(user: Pick<CentralAuthUser, "id" | "email"> | null): void {
   webSignedIn = user !== null;
-  if (!import.meta.env.PROD || window.location.origin !== "https://openbot.run") return;
+  if (!OPTIONAL_ANALYTICS_ENABLED || !import.meta.env.PROD || window.location.origin !== "https://openbot.run") return;
   queue ??= new ReportQueue(
     indexedReportStorage("openbot-web-error-reports-v1"),
     openPanelTransport({ clientId: "6c989975-87ef-4f0c-857e-ab449a65b5c2" }),

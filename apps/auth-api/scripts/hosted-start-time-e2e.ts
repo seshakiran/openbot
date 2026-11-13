@@ -12,6 +12,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { isDynamicRecord } from "@openbot/contracts/runtime-values";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect } from "effect";
 import {
   type AccountAnalyticsEvent,
@@ -195,6 +196,10 @@ async function openPanelBodyHasTheTime() {
   analytics.track("owner", event(MAX_HOSTED_START_MS + 1, "message"));
   analytics.track("owner", { name: "hosted_server_action", action: "woken", reason: "message", durationMs: 5 });
   await Promise.all(work);
+  if (!OPTIONAL_ANALYTICS_ENABLED) {
+    check("disabled analytics sends no hosted start event", bodies.length === 0);
+    return;
+  }
   const properties = bodies.map((body) =>
     isDynamicRecord(body) && isDynamicRecord(body.payload) && isDynamicRecord(body.payload.properties)
       ? body.payload.properties

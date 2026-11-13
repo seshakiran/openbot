@@ -2,6 +2,7 @@ import {
   ANALYTICS_GENERATIONS,
   classifyFailure,
   type FailureProperties,
+  OPTIONAL_ANALYTICS_ENABLED,
   openPanelTransport,
   ReportQueue,
   type ReportStorage,
@@ -43,6 +44,7 @@ export function mobileReportQueue(): ReportQueue | undefined {
   const clientId = process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_ID;
   const clientSecret = process.env.EXPO_PUBLIC_OPENPANEL_CLIENT_SECRET;
   if (
+    !OPTIONAL_ANALYTICS_ENABLED ||
     __DEV__ ||
     process.env.EXPO_PUBLIC_APP_ENV !== "production" ||
     !clientId ||

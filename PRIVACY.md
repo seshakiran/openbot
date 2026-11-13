@@ -1,3 +1,26 @@
+# Private fork policy
+
+This fork disables optional analytics and remote failure-report delivery at the
+collector entry points and shared report transport. This includes anonymous
+usage events, account and sales analytics, public-site events, mobile events and
+Signal capacity reports. Analytics preferences cannot enable those sends.
+Existing local records are preserved. No historical records already sent to an
+outside service are removed by this change.
+
+This policy applies to builds made from this source. Existing installed upstream
+apps do not change when this repository changes. The
+[MacBook guide](tools/macos/MACBOOK.md) includes a local network block for the known
+analytics destination, required by the private launcher. The iPhone requires an
+updated app build. No public-service deployment is included.
+
+Private account sign-in stays on the configured private host. Tailscale, SSH,
+LLM providers, update services, catalogs, visited pages and plugins can still use
+the network for their functions. This is not a claim of zero network traffic.
+The upstream policy below describes the original product and its services;
+its analytics opt-in and opt-out behavior is overridden in this fork.
+
+---
+
 # Privacy
 
 OpenBot is local-first, but it is not offline-only. Agent workspaces, conversations, attachments,

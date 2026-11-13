@@ -1,5 +1,6 @@
 import type { CentralAuthState, CentralAuthUser } from "@openbot/contracts/ipc";
 import { createOpenBotLogger, toLogValue } from "@openbot/logging";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect, Semaphore } from "effect";
 import {
   readAnalyticsPreference,
@@ -51,11 +52,14 @@ export class AnalyticsPreferenceService {
 
   /** Waits for a write in progress, so a read after an account change gets the followed answer. */
   read(setupCompleted: boolean) {
-    return this.#writes.withPermit(readAnalyticsPreference(this.#path, setupCompleted));
+    return this.#writes
+      .withPermit(readAnalyticsPreference(this.#path, setupCompleted))
+      .pipe(Effect.map((preference) => ({ enabled: OPTIONAL_ANALYTICS_ENABLED && preference.enabled })));
   }
 
   /** The answer of the signed-in account from any device, or null when it has none. */
   accountAnswer(): boolean | null {
+    if (!OPTIONAL_ANALYTICS_ENABLED) return false;
     const state = this.#account.getState();
     return state.status === "signed_in" ? (state.user.analyticsEnabled ?? null) : null;
   }
@@ -69,6 +73,7 @@ export class AnalyticsPreferenceService {
     enabled: boolean,
     chosen: boolean,
   ) {
+    enabled = OPTIONAL_ANALYTICS_ENABLED && enabled;
     const preference = yield* this.#writes.withPermit(
       readSavedAnalyticsPreference(this.#path).pipe(
         // A choice is always saved. When the earlier answer cannot be read, an "off" stays kept.

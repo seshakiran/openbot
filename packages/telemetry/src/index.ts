@@ -11,6 +11,7 @@ export {
   structuredCause,
 } from "./events";
 export { currentAnalyticsInstallId, newAnalyticsInstallId } from "./install-id";
+export { OPTIONAL_ANALYTICS_ENABLED } from "./privacy";
 export type { ReportStorage, ReportTransport } from "./queue";
 export { REPORT_BYTES, REPORT_LIMIT, REPORT_TTL, ReportQueue, TelemetryFailure, telemetryIO } from "./queue";
 export { openPanelTransport } from "./transport";

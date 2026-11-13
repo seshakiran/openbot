@@ -10,6 +10,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect } from "effect";
 import { type AccountAnalyticsEvent, createAccountAnalytics } from "../src/server/account-analytics";
 import { SalesAnalyticsDelivery } from "../src/server/sales-analytics-delivery";
@@ -64,11 +65,15 @@ async function accountAnalytics() {
   const database = migratedDatabase();
   const api = openPanel();
   const work: Promise<void>[] = [];
+  let scheduled = 0;
   const analytics = createAccountAnalytics({
     clientId: "client",
     clientSecret: "secret",
     fetch: api.fetch,
-    schedule: (send) => work.push(Effect.runPromise(send)),
+    schedule: (send) => {
+      scheduled += 1;
+      work.push(Effect.runPromise(send));
+    },
     database: sqliteD1(database),
   });
   const send = async (accountId: string | null, event: AccountAnalyticsEvent) => {
@@ -77,6 +82,19 @@ async function accountAnalytics() {
     await Promise.all(work.splice(0));
     return [...api.requests];
   };
+
+  if (!OPTIONAL_ANALYTICS_ENABLED) {
+    for (const event of [
+      { name: "billing_action", action: "payment_succeeded", product: "license" },
+      { name: "account_created", surface: "desktop", firstTouch: null },
+      { name: "email_sent", kind: "welcome", result: "accepted" },
+    ] as const) {
+      const requests = await send(PAYER.id, event);
+      check(`disabled account analytics sends no ${event.name} or email identity`, requests.length === 0);
+    }
+    check("disabled account analytics schedules no delivery", scheduled === 0);
+    return;
+  }
 
   for (const action of [
     "plan_started",
@@ -149,7 +167,28 @@ async function salesLedger() {
       ledger.enqueue("billing:failed", PAYER.id, "billing_action", { ...sale, action: "payment_failed" }, at),
     ]),
   );
+  if (!OPTIONAL_ANALYTICS_ENABLED) {
+    database
+      .prepare(`INSERT INTO billing_analytics_events(
+      source_key, profile_id, event_name, properties_json, event_timestamp, status, attempts,
+      next_attempt_at, claimed_at, claim_token, last_status, last_error, created_at, updated_at
+    ) VALUES ('existing', 'payer', 'billing_action', '{}', ?, 'pending', 0, 0, NULL, NULL, NULL, NULL, ?, ?)`)
+      .run(at, at, at);
+  }
   const summary = await Effect.runPromise(ledger.drain());
+  if (!OPTIONAL_ANALYTICS_ENABLED) {
+    const rows = database.prepare("SELECT source_key, status, attempts FROM billing_analytics_events").all();
+    check("disabled sales analytics sends no event or email identity", api.requests.length === 0 && summary.sent === 0);
+    check(
+      "disabled sales analytics preserves old queued data and adds none",
+      rows.length === 1 &&
+        rows[0]?.source_key === "existing" &&
+        rows[0]?.status === "pending" &&
+        rows[0]?.attempts === 0,
+      rows,
+    );
+    return;
+  }
   const identities = api.requests.filter((request) => request.type === "identify");
   const tracks = api.requests.filter((request) => request.type === "track");
   check("the ledger sends each event", summary.sent === 3 && tracks.length === 3, { summary, requests: api.requests });

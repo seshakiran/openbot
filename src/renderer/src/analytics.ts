@@ -24,7 +24,7 @@ import {
 } from "@openbot/contracts/ipc";
 import { isBoolean, isDynamicRecord, isFunction, isNumber, isOneOf, isString } from "@openbot/contracts/runtime-values";
 import { normalizeEmailAddress } from "@openbot/contracts/validation";
-import { ANALYTICS_GENERATIONS } from "@openbot/telemetry";
+import { ANALYTICS_GENERATIONS, OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { OpenPanelBase, type OpenPanelOptions } from "@openpanel/web";
 import {
   ANALYTICS_SCHEMA_VERSION,
@@ -731,7 +731,10 @@ const UPDATE_PHASES = new Set([
 ]);
 
 function shouldEnableDesktopAnalytics(appInfo: AppInfo, productionBuild: boolean): boolean {
-  return appInfo.analyticsCaptureUrl !== undefined || (productionBuild && appInfo.variant === "production");
+  return (
+    OPTIONAL_ANALYTICS_ENABLED &&
+    (appInfo.analyticsCaptureUrl !== undefined || (productionBuild && appInfo.variant === "production"))
+  );
 }
 
 function sanitizeDesktopAnalyticsEvent(
@@ -899,7 +902,10 @@ class DesktopAnalytics {
    * failure reports, and the web preference controls both.
    */
   configureWeb(options: { version: string; user: AnalyticsIdentity | null; enabled: boolean }): boolean {
-    if (!this.#client && (!this.#productionBuild || window.location.origin !== "https://openbot.run")) {
+    if (
+      !OPTIONAL_ANALYTICS_ENABLED ||
+      (!this.#client && (!this.#productionBuild || window.location.origin !== "https://openbot.run"))
+    ) {
       this.#disabled = true;
       this.#pending = [];
       return false;
