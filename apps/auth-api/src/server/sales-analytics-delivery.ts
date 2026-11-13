@@ -1,5 +1,6 @@
 import { HOSTED_SERVER_ENTRY_POINTS } from "@openbot/contracts/hosted-servers";
 import { isDynamicRecord, isOneOf } from "@openbot/contracts/runtime-values";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect, Schema } from "effect";
 import {
   ACCOUNT_ANALYTICS_SCHEMA_VERSION,
@@ -195,6 +196,7 @@ export class SalesAnalyticsDelivery {
     properties: SalesAnalyticsProperties,
     timestamp: number,
   ): Effect.Effect<void, SalesAnalyticsDeliveryError> {
+    if (!OPTIONAL_ANALYTICS_ENABLED) return Effect.void;
     return Effect.tryPromise({
       try: async () => {
         const event = validateEvent(sourceKey, profileId, name, properties, timestamp);
@@ -215,6 +217,8 @@ export class SalesAnalyticsDelivery {
   }
 
   drain(): Effect.Effect<SalesAnalyticsDrainSummary, SalesAnalyticsDeliveryError> {
+    if (!OPTIONAL_ANALYTICS_ENABLED)
+      return Effect.succeed({ claimed: 0, sent: 0, rejected: 0, uncertain: 0, pending: 0 });
     return Effect.tryPromise({
       try: async () => {
         const now = this.#now();

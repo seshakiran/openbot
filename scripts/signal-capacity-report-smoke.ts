@@ -14,6 +14,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import { resolve } from "node:path";
 import { createOpenBotLogger } from "@openbot/logging";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { exportJWK } from "jose";
 
 const logger = createOpenBotLogger("signal-capacity-report-smoke");
@@ -184,113 +185,146 @@ try {
   });
   const reporterOutput = collect(reporter);
   const reporterExited = exitOf(reporter);
-  const reporterFailed = reporterExited.then((code) => {
-    throw new Error(`The reporter exited with ${code} before it sent its events: ${reporterOutput.text}`);
-  });
-  const capture = await Promise.race([captured(1), reporterFailed]);
+  if (!OPTIONAL_ANALYTICS_ENABLED) {
+    assert.equal(await reporterExited, 0);
+    assert.match(reporterOutput.text, /Capacity report off/u);
+    assert.equal(captures.length, 0, "Disabled analytics sends no capacity events.");
+    assert.equal(turnRequests, 0, "Disabled analytics reads no TURN metrics.");
+    const json = { "content-type": "application/json" };
+    const signed = {
+      ...json,
+      "x-openbot-timestamp": String(Math.floor(Date.now() / 1000)),
+      "x-openbot-delivery-id": "smoke-delivery-1",
+      "x-openbot-signature": `sha256=${"0".repeat(64)}`,
+    };
+    const webhookStatuses = [
+      await webhookRequest("a".repeat(129), json),
+      await webhookRequest("smoke-route", { "content-type": "text/plain" }),
+      await webhookRequest("smoke-route", json),
+      await webhookRequest("smoke-route", signed),
+      await webhookRequest("smoke-route", signed),
+    ];
+    assert.deepEqual(webhookStatuses, [404, 415, 401, 503, 503]);
+    mkdirSync(outputDirectory, { recursive: true });
+    const reportPath = resolve(outputDirectory, "report.json");
+    writeFileSync(
+      reportPath,
+      `${JSON.stringify({ passed: true, analyticsDisabled: true, eventsSent: 0, turnRequests, webhookStatuses }, null, 2)}\n`,
+    );
+    logger.info(`Passed. Report: ${reportPath}`);
+  } else {
+    const reporterFailed = reporterExited.then((code) => {
+      throw new Error(`The reporter exited with ${code} before it sent its events: ${reporterOutput.text}`);
+    });
+    const capture = await Promise.race([captured(1), reporterFailed]);
 
-  // The first sample sets the base. These requests fall in the interval of the second sample.
-  const json = { "content-type": "application/json" };
-  const signed = {
-    ...json,
-    "x-openbot-timestamp": String(Math.floor(Date.now() / 1000)),
-    "x-openbot-delivery-id": "smoke-delivery-1",
-    "x-openbot-signature": `sha256=${"0".repeat(64)}`,
-  };
-  const webhookStatuses = [
-    // One character over the route ID limit, so Signal, not the router, answers 404.
-    await webhookRequest("a".repeat(129), json),
-    await webhookRequest("smoke-route", { "content-type": "text/plain" }),
-    await webhookRequest("smoke-route", json),
-    await webhookRequest("smoke-route", signed),
-    await webhookRequest("smoke-route", signed),
-  ];
-  assert.deepEqual(webhookStatuses, [404, 415, 401, 503, 503]);
-  // A sample can start while the requests run, so the event that counts all of them can be a later one.
-  // The reporter sends string and number properties only (`capacity-report.ts`).
-  let webhookEvent: { payload: { properties: Record<string, string | number> } } | null = null;
-  for (let count = 2; count <= 4 && !webhookEvent; count += 1) {
-    const next = JSON.parse((await Promise.race([captured(count), reporterFailed])).text);
-    if (next.payload.properties.webhook_answers_503 === 2) webhookEvent = next;
-  }
-  reporter.kill("SIGTERM");
-  await reporterExited;
-  assert.ok(webhookEvent, "An event counts the webhook answers.");
-  const webhookProperties = webhookEvent.payload.properties;
-  assert.deepEqual(
-    Object.fromEntries(Object.entries(webhookProperties).filter(([key]) => key.startsWith("webhook_"))),
-    {
-      webhook_answers_200: 0,
-      webhook_answers_202: 0,
-      webhook_answers_400: 0,
-      webhook_answers_401: 1,
-      webhook_answers_404: 1,
-      webhook_answers_413: 0,
-      webhook_answers_415: 1,
-      webhook_answers_429: 0,
-      webhook_answers_503: 2,
-      // No host holds the route, so Signal passes no request on and waits for none.
-      webhook_waits: 0,
-      webhook_slow_waits: 0,
-    },
-  );
-  const eventsBeforeOff = captures.length;
-
-  const event = JSON.parse(capture.text);
-  assert.equal(capture.headers["openpanel-client-id"], "smoke-client");
-  assert.equal(capture.headers["openpanel-client-secret"], clientSecret);
-  assert.deepEqual(event, {
-    type: "track",
-    payload: {
-      name: "signal_capacity",
-      properties: {
-        surface: "signal",
-        environment: "production",
-        event_schema_version: 2,
-        turn_host: "turn.example.com",
-        turn_allocations: 2669,
-        turn_allocations_udp: 1343,
-        turn_allocations_tcp: 710,
-        turn_allocations_tls: 616,
-        signal_sockets: OPEN_SOCKETS,
-        signal_peer_connections: 0,
-      },
-    },
-  });
-  assert.ok(!capture.text.includes(metricsToken), "The event has no metrics token.");
-  assert.ok(!capture.text.includes(clientSecret), "The event has no client secret.");
-  assert.ok(
-    !reporterOutput.text.includes(metricsToken) && !reporterOutput.text.includes(clientSecret),
-    "The log has no secret.",
-  );
-
-  // Without the OpenPanel server client the reporter stops at once and reads and sends nothing.
-  const turnRequestsBefore = turnRequests;
-  const off = spawn("bun", [reporterPath], { cwd: root, env: reporterEnvironment, stdio: ["ignore", "pipe", "pipe"] });
-  const offOutput = collect(off);
-  assert.equal(await exitOf(off), 0, `The reporter without a client exits with 0: ${offOutput.text}`);
-  assert.match(offOutput.text, /Capacity report off/u);
-  assert.equal(captures.length, eventsBeforeOff, "The reporter without a client sends no event.");
-  assert.equal(turnRequests, turnRequestsBefore, "The reporter without a client reads no metrics.");
-
-  mkdirSync(outputDirectory, { recursive: true });
-  const reportPath = resolve(outputDirectory, "report.json");
-  writeFileSync(
-    reportPath,
-    `${JSON.stringify(
+    // The first sample sets the base. These requests fall in the interval of the second sample.
+    const json = { "content-type": "application/json" };
+    const signed = {
+      ...json,
+      "x-openbot-timestamp": String(Math.floor(Date.now() / 1000)),
+      "x-openbot-delivery-id": "smoke-delivery-1",
+      "x-openbot-signature": `sha256=${"0".repeat(64)}`,
+    };
+    const webhookStatuses = [
+      // One character over the route ID limit, so Signal, not the router, answers 404.
+      await webhookRequest("a".repeat(129), json),
+      await webhookRequest("smoke-route", { "content-type": "text/plain" }),
+      await webhookRequest("smoke-route", json),
+      await webhookRequest("smoke-route", signed),
+      await webhookRequest("smoke-route", signed),
+    ];
+    assert.deepEqual(webhookStatuses, [404, 415, 401, 503, 503]);
+    // A sample can start while the requests run, so the event that counts all of them can be a later one.
+    // The reporter sends string and number properties only (`capacity-report.ts`).
+    let webhookEvent: { payload: { properties: Record<string, string | number> } } | null = null;
+    for (let count = 2; count <= 4 && !webhookEvent; count += 1) {
+      const next = JSON.parse((await Promise.race([captured(count), reporterFailed])).text);
+      if (next.payload.properties.webhook_answers_503 === 2) webhookEvent = next;
+    }
+    reporter.kill("SIGTERM");
+    await reporterExited;
+    assert.ok(webhookEvent, "An event counts the webhook answers.");
+    const webhookProperties = webhookEvent.payload.properties;
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(webhookProperties).filter(([key]) => key.startsWith("webhook_"))),
       {
-        passed: true,
-        event: event.payload,
-        webhookStatuses,
-        webhookEvent: webhookEvent.payload,
-        offPathExitCode: 0,
-        eventsSent: captures.length,
+        webhook_answers_200: 0,
+        webhook_answers_202: 0,
+        webhook_answers_400: 0,
+        webhook_answers_401: 1,
+        webhook_answers_404: 1,
+        webhook_answers_413: 0,
+        webhook_answers_415: 1,
+        webhook_answers_429: 0,
+        webhook_answers_503: 2,
+        // No host holds the route, so Signal passes no request on and waits for none.
+        webhook_waits: 0,
+        webhook_slow_waits: 0,
       },
-      null,
-      2,
-    )}\n`,
-  );
-  logger.info(`Passed. Report: ${reportPath}`);
+    );
+    const eventsBeforeOff = captures.length;
+
+    const event = JSON.parse(capture.text);
+    assert.equal(capture.headers["openpanel-client-id"], "smoke-client");
+    assert.equal(capture.headers["openpanel-client-secret"], clientSecret);
+    assert.deepEqual(event, {
+      type: "track",
+      payload: {
+        name: "signal_capacity",
+        properties: {
+          surface: "signal",
+          environment: "production",
+          event_schema_version: 2,
+          turn_host: "turn.example.com",
+          turn_allocations: 2669,
+          turn_allocations_udp: 1343,
+          turn_allocations_tcp: 710,
+          turn_allocations_tls: 616,
+          signal_sockets: OPEN_SOCKETS,
+          signal_peer_connections: 0,
+        },
+      },
+    });
+    assert.ok(!capture.text.includes(metricsToken), "The event has no metrics token.");
+    assert.ok(!capture.text.includes(clientSecret), "The event has no client secret.");
+    assert.ok(
+      !reporterOutput.text.includes(metricsToken) && !reporterOutput.text.includes(clientSecret),
+      "The log has no secret.",
+    );
+
+    // Without the OpenPanel server client the reporter stops at once and reads and sends nothing.
+    const turnRequestsBefore = turnRequests;
+    const off = spawn("bun", [reporterPath], {
+      cwd: root,
+      env: reporterEnvironment,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const offOutput = collect(off);
+    assert.equal(await exitOf(off), 0, `The reporter without a client exits with 0: ${offOutput.text}`);
+    assert.match(offOutput.text, /Capacity report off/u);
+    assert.equal(captures.length, eventsBeforeOff, "The reporter without a client sends no event.");
+    assert.equal(turnRequests, turnRequestsBefore, "The reporter without a client reads no metrics.");
+
+    mkdirSync(outputDirectory, { recursive: true });
+    const reportPath = resolve(outputDirectory, "report.json");
+    writeFileSync(
+      reportPath,
+      `${JSON.stringify(
+        {
+          passed: true,
+          event: event.payload,
+          webhookStatuses,
+          webhookEvent: webhookEvent.payload,
+          offPathExitCode: 0,
+          eventsSent: captures.length,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    logger.info(`Passed. Report: ${reportPath}`);
+  }
 } catch (error) {
   logger.error(`Signal output: ${signalOutput.text}`);
   throw error;

@@ -1,3 +1,5 @@
+import { Effect } from "effect";
+import { OPTIONAL_ANALYTICS_ENABLED } from "./privacy";
 import { type ReportTransport, telemetryIO } from "./queue";
 
 export function openPanelTransport(options: {
@@ -7,6 +9,7 @@ export function openPanelTransport(options: {
   endpoint?: string;
   fetch?: typeof fetch;
 }): ReportTransport {
+  if (!OPTIONAL_ANALYTICS_ENABLED) return () => Effect.succeed(false);
   const send = options.fetch ?? globalThis.fetch;
   return (report, signal) =>
     telemetryIO(async () => {

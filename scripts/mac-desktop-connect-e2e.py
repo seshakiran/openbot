@@ -32,7 +32,7 @@ http.server.HTTPServer((forward[0],int(forward[1])),Handler).serve_forever()
         ssh.chmod(0o700)
         # Replace only the transport executable in an isolated copy. No production test hook.
         launcher = directory / 'connect.py'
-        launcher.write_text((ROOT / 'tools/macos/connect-desktop.py').read_text().replace("'/usr/bin/ssh'", repr(str(ssh))))
+        launcher.write_text((ROOT / 'tools/macos/connect-desktop.py').read_text().replace("'/usr/bin/ssh'", repr(str(ssh))).replace("'analytics.openbot.run'", "'localhost'"))
         bundle = directory / 'OpenBot.app'
         (bundle / 'Contents/MacOS').mkdir(parents=True)
         (bundle / 'Contents/Info.plist').write_bytes(plistlib.dumps({'CFBundleExecutable': 'OpenBot'}))
@@ -61,11 +61,18 @@ http.server.HTTPServer((forward[0],int(forward[1])),Handler).serve_forever()
             busy_command = [*command[:-1], str(occupied.getsockname()[1])]
             result = subprocess.run(busy_command, capture_output=True, text=True, timeout=10)
             assert result.returncode != 0 and 'port is busy' in result.stderr
+        denied_launcher = directory / 'denied.py'
+        denied_launcher.write_text((ROOT / 'tools/macos/connect-desktop.py').read_text().replace("'analytics.openbot.run'", "'192.0.2.1'"))
+        with socket.socket() as free:
+            free.bind(('127.0.0.1', 0))
+            denied_port = free.getsockname()[1]
+        denied = subprocess.run([sys.executable, str(denied_launcher), *command[2:-1], str(denied_port)], capture_output=True, text=True, timeout=10)
+        assert denied.returncode != 0 and 'analytics destination block first' in denied.stderr
         REPORT.parent.mkdir(parents=True, exist_ok=True)
         REPORT.write_text(json.dumps({'passed': True, 'checks': ['loopback binding', 'SSH host-key checking',
             'API readiness', 'private API and Signal environment', 'separate profile', 'Electron Node mode removed',
-            'tunnel cleanup on app exit', 'occupied port refusal'],
-            'limits': 'Transport and installed-app fixtures; no MacBook or real SSH authentication in this test.'}, indent=2))
+            'tunnel cleanup on app exit', 'occupied port refusal', 'unblocked analytics refusal'],
+            'limits': 'Loopback analytics DNS, transport and installed-app fixtures; no MacBook or real SSH authentication in this test.'}, indent=2))
         print('Passed. Report: ' + str(REPORT))
 
 

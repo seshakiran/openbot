@@ -1,3 +1,4 @@
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect, Schedule, Schema } from "effect";
 
 // Sends OpenPanel one `signal_capacity` event every 5 minutes: the TURN allocations from the coturn
@@ -174,6 +175,10 @@ const report = Effect.fn("CapacityReport.report")(function* (
 });
 
 const main = Effect.gen(function* () {
+  if (!OPTIONAL_ANALYTICS_ENABLED) {
+    console.info("Capacity report off: optional analytics is disabled.");
+    return;
+  }
   const config = readConfig(process.env);
   if (!config) {
     console.info(

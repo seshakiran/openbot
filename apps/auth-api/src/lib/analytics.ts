@@ -8,6 +8,7 @@ import {
   rememberFirstTouch,
 } from "@openbot/contracts/first-touch";
 import { isBoolean, isOneOf } from "@openbot/contracts/runtime-values";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { OpenPanel, OpenPanelBase, type OpenPanelOptions, type TrackProperties } from "@openpanel/web";
 import { BRAND_ROUTE } from "./brand-page";
 import { CLA_ROUTE } from "./cla";
@@ -437,6 +438,7 @@ class LandingAnalytics {
   }
 
   #ensureClient(hostname: string): boolean {
+    if (!OPTIONAL_ANALYTICS_ENABLED) return false;
     if (!shouldEnableLandingAnalytics(hostname, this.#productionBuild)) return false;
     if (this.#client) return true;
     try {

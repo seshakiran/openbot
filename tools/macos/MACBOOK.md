@@ -42,8 +42,20 @@ cd "$HOME/Downloads/Sentinels-Connect"
 curl --fail --location --output connect-desktop.py https://raw.githubusercontent.com/seshakiran/openbot/main/tools/macos/connect-desktop.py
 curl --fail --location --output Connect-Sentinels.command https://raw.githubusercontent.com/seshakiran/openbot/main/tools/macos/Connect-Sentinels.command
 curl --fail --location --output MACBOOK.md https://raw.githubusercontent.com/seshakiran/openbot/main/tools/macos/MACBOOK.md
+curl --fail --location --output block-analytics.py https://raw.githubusercontent.com/seshakiran/openbot/main/tools/macos/block-analytics.py
+# Read block-analytics.py before running it with sudo.
+sudo python3 block-analytics.py install
+python3 block-analytics.py status
 sh Connect-Sentinels.command
 ```
+
+The analytics block adds a marked entry to `/etc/hosts` for
+`analytics.openbot.run`, on IPv4 and IPv6. It applies to all applications on this
+Mac, and keeps the other hosts entries. Close OpenBot before installing it.
+It does not block the private account service, Signal or LLM providers.
+The launcher refuses to start if DNS does not confirm the block. For removal,
+run `sudo python3 block-analytics.py remove`; this restores analytics network
+access for old binaries and the private launcher will then refuse to start.
 
 The launcher asks for the host's Tailscale hostname and Mac login short name.
 It does not include a real hostname, user name, password or API key. Read the
@@ -53,9 +65,9 @@ use the explicit `--app` command described below.
 
 ## MacBook steps
 
-1. Copy `connect-desktop.py` and `Connect-Sentinels.command` from this directory
+1. Copy `connect-desktop.py`, `block-analytics.py` and `Connect-Sentinels.command` from this directory
    to one folder on the MacBook. Python 3 and the OpenBot app are required.
-2. Close the normal OpenBot app to avoid confusion between its two profiles.
+2. Install and verify the analytics block as shown above. Close the normal OpenBot app to avoid confusion between its two profiles.
 3. Open Terminal in that folder and run:
 
 ```sh
@@ -107,3 +119,44 @@ python3 scripts/mac-desktop-connect-e2e.py
 
 The report is saved under `.openbot-build/mac-desktop-connect-e2e/` and is ignored
 by Git. Generated packages with a real hostname or user must also stay ignored.
+
+## Privacy policy of this fork
+
+This source disables optional product analytics, anonymous usage events, failure
+reports, account and sales analytics, public-site analytics and Signal capacity
+reports. The shared report transport also refuses sends. A saved preference
+cannot enable these collectors. Existing reports and database records are kept;
+they are not sent or deleted by this change.
+
+The installed MacBook app is an older binary. The local destination block is
+required until it is replaced by a build of this source. The block covers the
+analytics hostname found in this source audit; it is not a general firewall or
+a promise about every future upstream binary. The installed iPhone app also
+needs a new build to receive the source policy. This change does not deploy a
+public account service or install a new phone build.
+
+Tailscale and SSH still handle the connection. LLM providers receive requests
+you send to them. Updates, catalogs, visited pages and plugins can also use the
+network. Local diagnostics stay on the computer unless you share them. These
+required or user-requested connections are not optional analytics.
+
+## Connection progress reported on 2026-11-12
+
+The MacBook resolved the host after accepting Tailscale DNS. The user confirmed
+SSH host-key acceptance and password authentication. The launcher reported that
+the private account API was ready and the app was starting. This confirms the
+tunnel and API path, but does not yet confirm sign-in or a Hanu reply.
+
+## Privacy checks on 2026-11-12
+
+| Surface | Result |
+| --- | --- |
+| Shared failure transport | Identified and anonymous reports made zero HTTP requests to a local capture server. |
+| Account and sales collectors | Six focused E2E checks passed; no event or email identity was sent, and an existing pending row stayed unchanged. |
+| Desktop launcher | Private connection fixture passed; an unblocked analytics destination was refused. |
+| Hosts-file helper | Existing entries survived two installs; removal restored the fixture; malformed markers were refused. |
+| Type and lint checks | Focused Node and account API checks passed; changed TypeScript files passed Biome. |
+| Installed MacBook and iPhone | Network block and updated phone build still need device checks. |
+
+The hosts-file test uses a private fixture. It does not change the test computer's
+`/etc/hosts`. No public service was deployed as part of these checks.

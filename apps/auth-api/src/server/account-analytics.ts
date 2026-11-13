@@ -18,6 +18,7 @@ import {
 } from "@openbot/contracts/hosted-servers";
 import { isOneOf } from "@openbot/contracts/runtime-values";
 import { normalizeEmailAddress } from "@openbot/contracts/validation";
+import { OPTIONAL_ANALYTICS_ENABLED } from "@openbot/telemetry";
 import { Effect, Schema } from "effect";
 import type { HostedPoolGroup } from "./hosted-pool-snapshot";
 
@@ -209,6 +210,7 @@ export async function readAccountEmail(database: D1Database, accountId: string):
 }
 
 export function createAccountAnalytics(options: AccountAnalyticsOptions): AccountAnalytics {
+  if (!OPTIONAL_ANALYTICS_ENABLED) return NO_ACCOUNT_ANALYTICS;
   const clientId = options.clientId?.trim();
   const clientSecret = options.clientSecret?.trim();
   if (!clientId || !clientSecret) return NO_ACCOUNT_ANALYTICS;
