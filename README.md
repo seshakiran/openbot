@@ -402,6 +402,52 @@ For a Mac development host with a remote iPhone, see
 [Mac and iPhone over Tailscale](docs/mac-iphone-tailscale.md). This setup pairs
 the phone without an email sender and keeps development login routes local.
 
+## Private Sentinels setup
+
+Use this guide list for the private Mac host and its clients:
+
+| Task | Instructions |
+| --- | --- |
+| Mac host and iPhone pairing over Tailscale | [Mac and iPhone setup](docs/mac-iphone-tailscale.md) |
+| Start at Mac login, automatic restart and saved logs | [Managed Mac services](tools/macos/README.md) |
+| Connect the installed MacBook app through SSH | [MacBook setup and download commands](tools/macos/MACBOOK.md) |
+| Optional analytics shutdown and installed-app limits | [Privacy policy](PRIVACY.md) |
+| Ask Hanu with the iPhone Action Button | [Sentinels and Hanu](docs/sentinels.md) |
+| Private Woof speech server | [Voice setup](tools/woof/README.md) |
+
+### Connect a MacBook
+
+1. Keep Tailscale connected on both Macs. Enable Tailscale DNS on the MacBook
+   with `tailscale set --accept-dns=true` if the host name does not resolve.
+2. Follow the MacBook guide to download the launcher and install the local
+   analytics destination block. Close OpenBot before applying the block.
+3. Run the launcher with the host's Tailscale DNS name and Mac login short name:
+
+```sh
+cd "$HOME/Downloads/Sentinels-Connect"
+python3 connect-desktop.py --host example.tail123456.ts.net --user example
+```
+
+Use the folder where you saved the launcher if it differs from this example.
+Check the SSH fingerprint with the host owner, then enter that Mac user's
+password if SSH asks. Keep Terminal open while using this client.
+
+4. In the app window that the launcher opens, enter the same email as the host
+   owner. Select **Send sign-in code**. Enter the development code shown on the
+   next screen; the private development service does not send email.
+5. Select **Sentinels**, then **Hanu**, and send a test message. An invitation
+   does not switch the app's account service; the launcher supplies that setting.
+
+The separate client profile keeps the normal installed-app profile available.
+Agents and chats stay on the host. If the development code or server does not
+appear, stop and report the screen with email and codes hidden.
+
+Optional analytics, including anonymous reports, are disabled in this fork's
+source. An existing installed MacBook app needs the local destination block;
+the launcher checks it before opening the app. An existing iPhone app needs an
+updated build. LLM, Tailscale and SSH connections remain available. Updating
+GitHub does not replace an installed app.
+
 ## Commands
 
 The browser client is served at `/app` by the public web app. For local development, run
@@ -515,8 +561,9 @@ The development runner advertises both Mobile Connect and its Signal service on 
 LAN interface. Restart the runner after changing networks so newly generated QR codes contain the
 current address.
 
-Production mobile analytics setup and required OpenPanel credentials are documented in
-[OpenBot Mobile](apps/mobile/README.md#openpanel-product-analytics).
+Optional mobile analytics are disabled in this private fork. The upstream OpenPanel
+setup in [OpenBot Mobile](apps/mobile/README.md#openpanel-product-analytics) does not
+enable analytics in this source. Installed phone apps need an updated build.
 
 `mobile:go:tunnel` exposes only the Expo development server. It does not expose the local account
 API, Signal, or TURN. A phone on 5G cannot use the default LAN addresses. For a test across networks,
