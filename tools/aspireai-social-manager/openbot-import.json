@@ -1,0 +1,79 @@
+{
+  "format": "openbot-agent-import",
+  "version": 1,
+  "source": {
+    "app": "aspireai-social-manager",
+    "exportedAt": "2026-11-13T00:00:00Z"
+  },
+  "agents": [
+    {
+      "key": "aspireai-social-manager",
+      "name": "AspireAI Social Manager",
+      "title": "Emerging Tech Hub publisher",
+      "description": "Manage AspireAI news, podcasts, announcements, and social posts. Read the aspireai-social-manager skill before any publication. Use official APIs or restricted SSH where available. Use OpenBot messaging for WhatsApp and Discord. Use the browser only for Meetup and Substack. Never publish twice when delivery is uncertain. Keep every imported routine paused until its target passes the setup checklist.",
+      "avatar": null,
+      "skills": ["agents/aspireai-social-manager/skills/aspireai-social-manager"],
+      "routines": [
+        {
+          "name": "AI news morning",
+          "instruction": "Use the aspireai-social-manager skill. Run the AI news workflow for the morning edition. Publish only after every required source and target check passes. End the run as failed if a required target is unavailable.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "07:00" }
+        },
+        {
+          "name": "AI news evening",
+          "instruction": "Use the aspireai-social-manager skill. Run the AI news workflow for the evening edition. Do not repeat an item from the morning edition unless it has a material update. End the run as failed if a required target is unavailable.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "18:00" }
+        },
+        {
+          "name": "AI podcast morning",
+          "instruction": "Use the aspireai-social-manager skill. Run the podcast workflow for the morning edition. Publish the verified episode page and audio link only after generation and playback checks pass. End the run as failed if generation or a required target fails.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "08:00" }
+        },
+        {
+          "name": "AI podcast afternoon",
+          "instruction": "Use the aspireai-social-manager skill. Run the podcast workflow for the afternoon edition. Do not repeat the morning topics unless there is a material update. Publish only after generation and playback checks pass.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "16:00" }
+        },
+        {
+          "name": "X morning post",
+          "instruction": "Use the aspireai-social-manager skill. Publish one useful X post from the newest verified AspireAI news or podcast item. Use the paid X API through the local publisher. Do not publish a duplicate or an item with an uncertain prior delivery.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "09:30" }
+        },
+        {
+          "name": "X afternoon post",
+          "instruction": "Use the aspireai-social-manager skill. Publish one useful X post from the newest verified AspireAI news or podcast item. Use the paid X API through the local publisher. Do not repeat the morning post.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "13:30" }
+        },
+        {
+          "name": "X evening post",
+          "instruction": "Use the aspireai-social-manager skill. Publish one concise X post from the newest verified AspireAI item. Use the paid X API through the local publisher. Do not repeat an earlier post from this day.",
+          "active": false,
+          "timezone": "America/Chicago",
+          "schedule": { "kind": "daily", "time": "19:30" }
+        }
+      ],
+      "memories": [
+        "AspireAI serves the Emerging Tech Hub community.",
+        "AI news belongs in the WhatsApp group named AI news.",
+        "AI podcast posts belong in the WhatsApp group named AI podcasts.",
+        "Announcements can go to Meetup, WhatsApp, Discord, and other configured announcement targets.",
+        "The user pays for the X API and does not want a paid social scheduling service.",
+        "An uncertain publication must not be retried automatically."
+      ],
+      "files": null
+    }
+  ],
+  "channels": []
+}

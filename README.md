@@ -804,3 +804,15 @@ for existing-user enrollment, password handling, package upgrades, and required 
 
 For Mac login startup, automatic restart and private lifecycle logs, see
 [managed Mac services](tools/macos/README.md).
+
+## AspireAI social manager
+
+This fork includes an importable, paused-by-default AspireAI publisher for AI news, podcasts, X,
+WhatsApp, Discord, Meetup, Substack, and the AspireAI site. Build the import file with:
+
+```sh
+python3 tools/aspireai-social-manager/build_import.py
+```
+
+See [AspireAI social manager](tools/aspireai-social-manager/README.md) for account setup, target
+checks, the default Central Time schedule, and the no-duplicate failure policy.

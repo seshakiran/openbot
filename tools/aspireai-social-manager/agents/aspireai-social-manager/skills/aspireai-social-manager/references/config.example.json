@@ -1,0 +1,29 @@
+{
+  "site": {
+    "enabled": false,
+    "argv": ["/usr/bin/ssh", "-o", "BatchMode=yes", "aspireai-publisher", "/usr/local/bin/aspireai-publish"],
+    "timeoutSeconds": 90
+  },
+  "x": {
+    "enabled": false,
+    "apiBase": "https://api.x.com",
+    "timeoutSeconds": 30
+  },
+  "discord": {
+    "enabled": false,
+    "timeoutSeconds": 30
+  },
+  "podcast": {
+    "enabled": false,
+    "argv": ["/usr/local/bin/aspireai-podcast"],
+    "timeoutSeconds": 1200
+  },
+  "targets": {
+    "whatsappNews": "AI news",
+    "whatsappPodcasts": "AI podcasts",
+    "whatsappAnnouncements": "Emerging Tech Hub",
+    "discordNews": "ai-news",
+    "discordPodcasts": "ai-podcasts",
+    "discordAnnouncements": "announcements"
+  }
+}
